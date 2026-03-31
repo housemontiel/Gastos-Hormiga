@@ -3,15 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hormiga Finance</title>
     <link rel="stylesheet" href="styles.css">
-    <title>Document</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to Gastos Hormiga</h1>
-        <div class="stat-label">Some statistics</div>
-        <!-- Add more content here -->
+    <div class="app">
+        <h1>Hormiga Finance</h1>
+        <div id="auth">
+            <button id="login">Login</button>
+            <button id="logout">Logout</button>
+        </div>
+        <div id="budget-tracker">
+            <input type="number" id="budget-input" placeholder="Enter your budget" />
+            <button id="set-budget">Set Budget</button>
+        </div>
+        <div id="expense-management">
+            <input type="text" id="expense-input" placeholder="Enter an expense" />
+            <input type="number" id="amount-input" placeholder="Amount" />
+            <button id="add-expense">Add Expense</button>
+        </div>
+        <div id="charts">
+            <!-- Charts will be displayed here -->
+        </div>
+        <div id="goal-setting">
+            <input type="text" id="goal-input" placeholder="Set a financial goal" />
+            <button id="set-goal">Set Goal</button>
+        </div>
+        <div id="csv-export">
+            <button id="export-csv">Export to CSV</button>
+        </div>
+        <div id="reminders">
+            <input type="time" id="reminder-time" />
+            <button id="set-reminder">Set Daily Reminder</button>
+        </div>
+        <div id="themes">
+            <select id="theme-selector">
+                <option value="midnight">Midnight</option>
+                <option value="sunset">Sunset</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="candy">Candy</option>
+            </select>
+        </div>
     </div>
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
