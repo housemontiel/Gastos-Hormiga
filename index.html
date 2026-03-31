@@ -1,54 +1,646 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hormiga Finance</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+<title>Hormiga Finance · Cloud Sync</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<!-- Firebase SDK compat (versión global) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+font-family: 'Inter', sans-serif;
+background: var(--bg);
+color: var(--text);
+transition: background 0.3s, color 0.3s;
+min-height: 100vh;
+}
+/* Temas */
+:root {
+--bg: #0A0C10;
+--surface: #14171C;
+--card: #1E2229;
+--border: #2A2F38;
+--primary: #6C5CE7;
+--primary-light: #8B7AFF;
+--danger: #FF6B6B;
+--warning: #FFB347;
+--success: #4CD964;
+--text: #F1F3F5;
+--text-secondary: #8E9AAB;
+--accent-gradient: linear-gradient(135deg, #6C5CE7, #A166FF);
+}
+[data-theme="sunset"] {
+--bg: #1E1A2F;
+--surface: #2A2438;
+--card: #352F44;
+--border: #4A3F6E;
+--primary: #FF9671;
+--primary-light: #FFB88C;
+--text: #FFF5E6;
+--text-secondary: #CBB9A8;
+--accent-gradient: linear-gradient(135deg, #FF9671, #FF6F61);
+}
+[data-theme="ocean"] {
+--bg: #0A2F44;
+--surface: #10455F;
+--card: #185C7A;
+--border: #2C7A9E;
+--primary: #00B4D8;
+--primary-light: #48CAE4;
+--text: #E0F7FF;
+--text-secondary: #AAD9E6;
+--accent-gradient: linear-gradient(135deg, #0096C7, #00B4D8);
+}
+[data-theme="forest"] {
+--bg: #0A2F1F;
+--surface: #14442E;
+--card: #1E5A3D;
+--border: #2C7A51;
+--primary: #A7E05E;
+--primary-light: #C0F08C;
+--text: #F0F7E6;
+--text-secondary: #C0D9B5;
+--accent-gradient: linear-gradient(135deg, #86C232, #A7E05E);
+}
+[data-theme="candy"] {
+--bg: #FFE5F1;
+--surface: #FFD1E3;
+--card: #FFB8D2;
+--border: #FF9BBA;
+--primary: #FF6B9D;
+--primary-light: #FF8FB1;
+--text: #4A2B3A;
+--text-secondary: #8A5C6E;
+--accent-gradient: linear-gradient(135deg, #FF8A5C, #FF6B9D);
+}
+.app { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+h1 { font-size: 1.8rem; font-weight: 700; background: var(--accent-gradient); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.theme-selector { display: flex; gap: 8px; background: var(--surface); padding: 6px 12px; border-radius: 40px; }
+.theme-btn { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; transition: transform 0.2s; }
+.theme-btn:hover { transform: scale(1.1); }
+.theme-btn.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+.card { background: var(--card); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat { background: var(--surface); border-radius: 20px; padding: 16px; text-align: center; }
+.stat-value { font-size: 1.8rem; font-weight: 700; background: var(--accent-gradient); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.filters input, .filters select { background: var(--surface); border: 1px solid var(--border); padding: 8px 12px; border-radius: 40px; color: var(--text); font-size: 0.85rem; }
+.filters input { flex: 1; }
+.expense-list { display: flex; flex-direction: column; gap: 12px; }
+.date-group { margin-top: 8px; }
+.date-label { font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-bottom: 8px; padding-left: 8px; }
+.expense-item { background: var(--surface); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.expense-info h3 { font-size: 1rem; font-weight: 600; }
+.expense-info p { font-size: 0.75rem; color: var(--text-secondary); }
+.expense-amount { text-align: right; font-weight: 700; }
+.expense-amount small { font-size: 0.7rem; color: var(--text-secondary); display: block; }
+.delete-btn { background: var(--danger); color: white; border: none; border-radius: 40px; padding: 4px 10px; font-size: 0.7rem; cursor: pointer; margin-left: 12px; }
+.chart-container { background: var(--surface); border-radius: 20px; padding: 16px; margin-bottom: 20px; }
+canvas { width: 100%; max-height: 200px; background: var(--card); border-radius: 16px; }
+.budget-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; margin: 0 12px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+.goal-card { background: var(--surface); border-radius: 20px; padding: 16px; margin-top: 20px; }
+.fab { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); border: none; font-size: 24px; color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 0.2s; z-index: 100; }
+.fab:active { transform: scale(0.94); }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; z-index: 200; visibility: hidden; opacity: 0; transition: all 0.2s; }
+.modal.active { visibility: visible; opacity: 1; }
+.modal-content { background: var(--surface); width: 100%; max-width: 500px; border-radius: 24px 24px 0 0; padding: 24px; transform: translateY(100%); transition: transform 0.3s ease-out; }
+.modal.active .modal-content { transform: translateY(0); }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-secondary); }
+input, select { width: 100%; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 1rem; }
+button { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 40px; font-weight: 600; width: 100%; cursor: pointer; margin-top: 8px; }
+.btn-secondary { background: transparent; border: 1px solid var(--border); }
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--card); color: var(--text); padding: 8px 16px; border-radius: 40px; font-size: 0.85rem; z-index: 300; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.empty-state span { font-size: 3rem; display: block; margin-bottom: 12px; }
+#authPanel, #userInfo { margin-bottom: 20px; }
+#authPanel input { margin-bottom: 12px; }
+@media (min-width: 768px) { .app { padding: 32px 24px 80px; } .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+</style>
 </head>
 <body>
-    <div class="app">
-        <h1>Hormiga Finance</h1>
-        <div id="auth">
-            <button id="login">Login</button>
-            <button id="logout">Logout</button>
-        </div>
-        <div id="budget-tracker">
-            <input type="number" id="budget-input" placeholder="Enter your budget" />
-            <button id="set-budget">Set Budget</button>
-        </div>
-        <div id="expense-management">
-            <input type="text" id="expense-input" placeholder="Enter an expense" />
-            <input type="number" id="amount-input" placeholder="Amount" />
-            <button id="add-expense">Add Expense</button>
-        </div>
-        <div id="charts">
-            <!-- Charts will be displayed here -->
-        </div>
-        <div id="goal-setting">
-            <input type="text" id="goal-input" placeholder="Set a financial goal" />
-            <button id="set-goal">Set Goal</button>
-        </div>
-        <div id="csv-export">
-            <button id="export-csv">Export to CSV</button>
-        </div>
-        <div id="reminders">
-            <input type="time" id="reminder-time" />
-            <button id="set-reminder">Set Daily Reminder</button>
-        </div>
-        <div id="themes">
-            <select id="theme-selector">
-                <option value="midnight">Midnight</option>
-                <option value="sunset">Sunset</option>
-                <option value="ocean">Ocean</option>
-                <option value="forest">Forest</option>
-                <option value="candy">Candy</option>
-            </select>
-        </div>
-    </div>
-    <script src="app.js"></script>
+<div class="app">
+<header>
+<h1>🐜 Hormiga Finance</h1>
+<div class="theme-selector" id="themeSelector"></div>
+</header>
+
+<!-- Panel de autenticación -->
+<div class="card" id="userPanel">
+<div id="authPanel">
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginPass" placeholder="Contraseña">
+<button id="loginBtn">Iniciar sesión</button>
+<button id="registerBtn" class="btn-secondary">Registrarse</button>
+</div>
+<div id="userInfo" style="display:none">
+<p>Bienvenido, <span id="userEmail"></span></p>
+<button id="logoutBtn" class="btn-secondary">Cerrar sesión</button>
+</div>
+</div>
+
+<div id="appContent" style="display:none">
+<!-- Estadísticas -->
+<div class="stats-grid">
+<div class="stat"><div class="stat-value" id="totalAnual">$0</div><div class="stat-label">Gasto anual</div></div>
+<div class="stat"><div class="stat-value" id="evitableAnual">$0</div><div class="stat-label">Evitable / año</div></div>
+<div class="stat"><div class="stat-value" id="ahorroPotencial">$0</div><div class="stat-label">Ahorro 5 años</div></div>
+<div class="stat"><div class="stat-value" id="conceptosCount">0</div><div class="stat-label">Gastos</div></div>
+</div>
+
+<!-- Gráfico -->
+<div class="card">
+<h2 style="margin-bottom: 16px;">📊 Distribución por categoría</h2>
+<div class="chart-container"><canvas id="categoryChart" width="400" height="200" style="width:100%; height:auto; max-height:200px"></canvas></div>
+</div>
+
+<!-- Presupuestos -->
+<div class="card">
+<h2 style="margin-bottom: 12px;">🎯 Presupuesto mensual por categoría</h2>
+<div id="budgetList"></div>
+<button id="editBudgetBtn" class="btn-secondary" style="margin-top: 12px;">✏️ Editar presupuestos</button>
+</div>
+
+<!-- Meta de ahorro -->
+<div class="goal-card">
+<h2 style="margin-bottom: 12px;">🏆 Meta de ahorro mensual</h2>
+<div style="display: flex; gap: 12px; align-items: center;">
+<input type="number" id="monthlyGoal" value="2000" step="100" style="flex:1">
+<button id="saveGoalBtn" style="width: auto; padding: 12px 24px;">Guardar</button>
+</div>
+<div class="progress-bar" style="margin: 12px 0 0 0"><div class="progress-fill" id="goalProgress" style="width:0%"></div></div>
+<p id="goalMessage" style="margin-top: 8px; font-size:0.85rem;"></p>
+</div>
+
+<!-- Lista de gastos -->
+<div class="card">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+<h2>📋 Mis gastos</h2>
+<button id="exportBtn" class="btn-secondary" style="width: auto; padding: 6px 12px;">📎 Exportar CSV</button>
+</div>
+<div class="filters">
+<input type="text" id="searchInput" placeholder="Buscar gasto...">
+<select id="categoryFilter">
+<option value="all">Todas las categorías</option>
+<option>Comida</option><option>Transporte</option><option>Ocio</option><option>Servicios</option><option>Otros</option>
+</select>
+</div>
+<div id="expenseList" class="expense-list"></div>
+</div>
+<button id="reminderBtn" class="btn-secondary" style="margin-top: 12px;">🔔 Activar recordatorio diario (notificaciones)</button>
+</div>
+</div>
+
+<button class="fab" id="fab">+</button>
+
+<div class="modal" id="modal">
+<div class="modal-content">
+<h2 style="margin-bottom: 16px;">➕ Nuevo gasto</h2>
+<div class="form-group"><label>Concepto</label><input type="text" id="concepto" placeholder="Ej: Café diario"></div>
+<div class="form-group"><label>Costo ($)</label><input type="number" id="costo" step="0.01"></div>
+<div class="form-group"><label>Frecuencia</label><select id="frecuencia"><option>Diaria</option><option>Semanal</option><option selected>Mensual</option></select></div>
+<div class="form-group"><label>Categoría</label><select id="categoria"><option>Comida</option><option>Transporte</option><option>Ocio</option><option>Servicios</option><option>Otros</option></select></div>
+<div class="form-group"><label>Tipo</label><select id="tipo"><option>Evitable</option><option>Necesario</option><option>Inesperado</option></select></div>
+<div class="form-group"><label>Fecha</label><input type="date" id="fecha"></div>
+<button id="saveExpense">Guardar gasto</button>
+<button class="btn-secondary" id="closeModal">Cancelar</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== CONFIGURACIÓN DE FIREBASE (TUS CREDENCIALES) ==========
+const firebaseConfig = {
+apiKey: "AIzaSyACIWE_jVXPhneM1HILPaUph-bTYrd2WO4",
+authDomain: "gastos-hormiga-a7beb.firebaseapp.com",
+projectId: "gastos-hormiga-a7beb",
+storageBucket: "gastos-hormiga-a7beb.firebasestorage.app",
+messagingSenderId: "327076635122",
+appId: "1:327076635122:web:8f3211e59efc55483d8b6b"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ========== ESTADO GLOBAL ==========
+let expenses = [];
+let budgets = { Comida: 3000, Transporte: 2000, Ocio: 1500, Servicios: 1000, Otros: 1000 };
+let monthlyGoal = 2000;
+let currentUser = null;
+const LOCAL_KEY = 'hormiga_local';
+
+// ========== AUXILIARES ==========
+function formatMoney(n) { return '$' + Math.round(n).toLocaleString('es-MX'); }
+function anual(g) { return g.cost * {Diaria:365, Semanal:52, Mensual:12}[g.freq]; }
+
+function saveLocal() {
+localStorage.setItem(LOCAL_KEY, JSON.stringify({ expenses, budgets, monthlyGoal }));
+}
+
+function loadLocal() {
+const stored = localStorage.getItem(LOCAL_KEY);
+if (stored) {
+const data = JSON.parse(stored);
+expenses = data.expenses || [];
+budgets = data.budgets || budgets;
+monthlyGoal = data.monthlyGoal || 2000;
+} else {
+expenses = [
+{ id: 'local1', concept: 'Café diario', cost: 45, freq: 'Diaria', cat: 'Comida', type: 'Evitable', date: new Date().toISOString().slice(0,10) },
+{ id: 'local2', concept: 'Netflix', cost: 219, freq: 'Mensual', cat: 'Ocio', type: 'Evitable', date: new Date().toISOString().slice(0,10) }
+];
+}
+document.getElementById('monthlyGoal').value = monthlyGoal;
+}
+
+function showToast(msg) {
+const toast = document.getElementById('toast');
+toast.textContent = msg;
+toast.classList.add('show');
+setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// ========== SINCRONIZACIÓN CON FIRESTORE ==========
+async function syncToCloud() {
+if (!currentUser) return;
+const userDocRef = db.collection('gastos').doc(currentUser.uid);
+await userDocRef.set({
+expenses,
+budgets,
+monthlyGoal,
+lastSync: firebase.firestore.FieldValue.serverTimestamp()
+});
+console.log('Sincronizado a la nube');
+}
+
+async function syncFromCloud() {
+if (!currentUser) return;
+const userDocRef = db.collection('gastos').doc(currentUser.uid);
+const doc = await userDocRef.get();
+if (doc.exists) {
+const data = doc.data();
+expenses = data.expenses || [];
+budgets = data.budgets || budgets;
+monthlyGoal = data.monthlyGoal || monthlyGoal;
+saveLocal();
+renderAll();
+showToast('Datos sincronizados desde la nube');
+} else {
+await syncToCloud();
+}
+}
+
+// ========== RENDERIZADO COMPLETO ==========
+function totalAnual() { return expenses.reduce((s,g) => s + anual(g), 0); }
+function totalEvitable() { return expenses.filter(g => g.type === 'Evitable').reduce((s,g) => s + anual(g), 0); }
+
+function updateStats() {
+const total = totalAnual();
+const evitable = totalEvitable();
+document.getElementById('totalAnual').innerText = formatMoney(total);
+document.getElementById('evitableAnual').innerText = formatMoney(evitable);
+document.getElementById('ahorroPotencial').innerText = formatMoney(evitable * 5);
+document.getElementById('conceptosCount').innerText = expenses.length;
+
+const monthlySpent = total / 12;
+const progress = monthlyGoal ? Math.min(100, (monthlySpent / monthlyGoal) * 100) : 0;
+document.getElementById('goalProgress').style.width = progress + '%';
+const remaining = monthlyGoal - monthlySpent;
+document.getElementById('goalMessage').innerHTML = remaining > 0 ? `Faltan ${formatMoney(remaining)} para alcanzar tu meta` : `¡Meta superada! Ahorraste ${formatMoney(-remaining)} extra.`;
+}
+
+function updateChart() {
+const canvas = document.getElementById('categoryChart');
+if (!canvas) return;
+const ctx = canvas.getContext('2d');
+const categories = ['Comida','Transporte','Ocio','Servicios','Otros'];
+const values = categories.map(cat => expenses.filter(g => g.cat === cat).reduce((s,g) => s + anual(g)/12, 0));
+const total = values.reduce((a,b)=>a+b,0);
+const colors = ['#6C5CE7', '#FF9671', '#00B4D8', '#A7E05E', '#FF6B9D'];
+
+canvas.width = canvas.clientWidth;
+canvas.height = 200;
+const w = canvas.width, h = canvas.height;
+ctx.clearRect(0,0,w,h);
+if (total === 0) {
+ctx.fillStyle = 'var(--text-secondary)';
+ctx.font = '12px Inter';
+ctx.fillText('Sin datos', w/2-30, h/2);
+return;
+}
+let start = -Math.PI/2;
+const centerX = w/2, centerY = h/2, radius = Math.min(w,h)/2 - 10;
+for (let i=0; i<categories.length; i++) {
+const angle = (values[i]/total) * Math.PI * 2;
+const end = start + angle;
+ctx.beginPath();
+ctx.moveTo(centerX, centerY);
+ctx.arc(centerX, centerY, radius, start, end);
+ctx.fillStyle = colors[i];
+ctx.fill();
+start = end;
+}
+}
+
+function renderBudgets() {
+const container = document.getElementById('budgetList');
+const monthlySpentByCat = {};
+expenses.forEach(g => {
+const monthly = anual(g)/12;
+monthlySpentByCat[g.cat] = (monthlySpentByCat[g.cat] || 0) + monthly;
+});
+container.innerHTML = Object.entries(budgets).map(([cat, limit]) => {
+const spent = monthlySpentByCat[cat] || 0;
+const percent = Math.min(100, (spent / limit) * 100);
+const color = spent > limit ? 'var(--danger)' : 'var(--primary)';
+return `
+<div class="budget-item">
+<strong>${cat}</strong>
+<div class="progress-bar"><div class="progress-fill" style="width:${percent}%; background:${color}"></div></div>
+<span style="font-size:0.75rem">${formatMoney(spent)} / ${formatMoney(limit)}</span>
+</div>
+`;
+}).join('');
+}
+
+function renderExpenses() {
+const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+const category = document.getElementById('categoryFilter').value;
+let filtered = expenses.filter(g =>
+(category === 'all' || g.cat === category) &&
+g.concept.toLowerCase().includes(searchTerm)
+);
+const groups = {};
+filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(g => {
+const dateKey = g.date || 'Sin fecha';
+if (!groups[dateKey]) groups[dateKey] = [];
+groups[dateKey].push(g);
+});
+const container = document.getElementById('expenseList');
+if (Object.keys(groups).length === 0) {
+container.innerHTML = `<div class="empty-state"><span>🐜</span><p>No hay gastos. Toca el botón + para agregar.</p></div>`;
+return;
+}
+container.innerHTML = Object.entries(groups).map(([date, items]) => `
+<div class="date-group">
+<div class="date-label">${date === new Date().toISOString().slice(0,10) ? 'Hoy' : date}</div>
+${items.map(g => `
+<div class="expense-item" data-id="${g.id}">
+<div class="expense-info">
+<h3>${escapeHtml(g.concept)}</h3>
+<p>${g.cat} · ${g.freq} · ${g.type}</p>
+</div>
+<div style="display:flex; align-items:center;">
+<div class="expense-amount">
+<div>${formatMoney(g.cost)}</div>
+<small>${formatMoney(anual(g))}/año</small>
+</div>
+<button class="delete-btn" onclick="deleteExpense('${g.id}')">🗑</button>
+</div>
+</div>
+`).join('')}
+</div>
+`).join('');
+}
+
+function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
+
+function renderAll() {
+updateStats();
+updateChart();
+renderBudgets();
+renderExpenses();
+saveLocal();
+}
+
+// ========== MODIFICACIÓN DE DATOS ==========
+window.deleteExpense = async (id) => {
+if (confirm('¿Eliminar este gasto?')) {
+expenses = expenses.filter(e => e.id !== id);
+saveLocal();
+await syncToCloud();
+renderAll();
+showToast('Gasto eliminado');
+}
+};
+
+async function addOrUpdateExpense(expense) {
+if (editingId) {
+const idx = expenses.findIndex(e => e.id === editingId);
+if (idx !== -1) expenses[idx] = expense;
+} else {
+expenses.push(expense);
+}
+saveLocal();
+await syncToCloud();
+renderAll();
+closeModalFunc();
+showToast(editingId ? 'Gasto actualizado' : 'Gasto agregado');
+}
+
+// ========== MODAL Y FORMULARIO ==========
+let editingId = null;
+const modal = document.getElementById('modal');
+const fab = document.getElementById('fab');
+const closeModalBtn = document.getElementById('closeModal');
+const saveBtn = document.getElementById('saveExpense');
+
+function openModal(expense = null) {
+if (expense) {
+editingId = expense.id;
+document.getElementById('concepto').value = expense.concept;
+document.getElementById('costo').value = expense.cost;
+document.getElementById('frecuencia').value = expense.freq;
+document.getElementById('categoria').value = expense.cat;
+document.getElementById('tipo').value = expense.type;
+document.getElementById('fecha').value = expense.date;
+} else {
+editingId = null;
+document.getElementById('concepto').value = '';
+document.getElementById('costo').value = '';
+document.getElementById('frecuencia').value = 'Mensual';
+document.getElementById('categoria').value = 'Comida';
+document.getElementById('tipo').value = 'Evitable';
+document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+}
+modal.classList.add('active');
+}
+
+function closeModalFunc() {
+modal.classList.remove('active');
+editingId = null;
+}
+
+fab.addEventListener('click', () => openModal());
+closeModalBtn.addEventListener('click', closeModalFunc);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModalFunc(); });
+
+saveBtn.addEventListener('click', () => {
+const concept = document.getElementById('concepto').value.trim();
+const cost = parseFloat(document.getElementById('costo').value);
+const freq = document.getElementById('frecuencia').value;
+const cat = document.getElementById('categoria').value;
+const type = document.getElementById('tipo').value;
+const date = document.getElementById('fecha').value;
+if (!concept || isNaN(cost) || cost <= 0) { showToast('Completa todos los campos'); return; }
+const expense = {
+id: editingId || Date.now().toString(),
+concept, cost, freq, cat, type, date
+};
+addOrUpdateExpense(expense);
+});
+
+// ========== OTRAS FUNCIONES ==========
+function exportCSV() {
+const rows = [['Concepto','Costo','Frecuencia','Categoría','Tipo','Fecha','Anual']];
+expenses.forEach(g => {
+rows.push([g.concept, g.cost, g.freq, g.cat, g.type, g.date, anual(g)]);
+});
+const csv = rows.map(row => row.join(',')).join('\n');
+const blob = new Blob([csv], {type: 'text/csv'});
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'gastos_hormiga.csv';
+a.click();
+URL.revokeObjectURL(url);
+showToast('Exportado a CSV');
+}
+document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+let reminderInterval;
+function startDailyReminder() {
+if (reminderInterval) clearInterval(reminderInterval);
+reminderInterval = setInterval(() => {
+const now = new Date();
+if (now.getHours() === 20 && now.getMinutes() === 0 && Notification.permission === 'granted') {
+new Notification('Hormiga Finance', { body: '📝 Registra tus gastos del día. ¡No dejes que se acumulen!' });
+}
+}, 60000);
+showToast('Recordatorio diario activado (20:00)');
+}
+document.getElementById('reminderBtn').addEventListener('click', () => {
+if (Notification.permission === 'granted') startDailyReminder();
+else if (Notification.permission === 'default') Notification.requestPermission().then(perm => { if (perm === 'granted') startDailyReminder(); });
+else showToast('Permiso de notificaciones denegado');
+});
+
+document.getElementById('saveGoalBtn').addEventListener('click', async () => {
+const newGoal = parseFloat(document.getElementById('monthlyGoal').value);
+if (!isNaN(newGoal) && newGoal > 0) {
+monthlyGoal = newGoal;
+saveLocal();
+await syncToCloud();
+renderAll();
+showToast('Meta actualizada');
+} else showToast('Ingresa un monto válido');
+});
+
+document.getElementById('editBudgetBtn').addEventListener('click', async () => {
+let newBudgets = prompt('Editar presupuestos mensuales (formato: Comida=3000,Transporte=2000,...)',
+Object.entries(budgets).map(([k,v])=>`${k}=${v}`).join(','));
+if (newBudgets) {
+try {
+const parts = newBudgets.split(',').map(p => p.trim().split('='));
+const newObj = {};
+parts.forEach(([cat, val]) => { if (cat && !isNaN(parseFloat(val))) newObj[cat] = parseFloat(val); });
+if (Object.keys(newObj).length) budgets = newObj;
+saveLocal();
+await syncToCloud();
+renderAll();
+showToast('Presupuestos actualizados');
+} catch(e) { showToast('Formato incorrecto'); }
+}
+});
+
+document.getElementById('searchInput').addEventListener('input', () => renderExpenses());
+document.getElementById('categoryFilter').addEventListener('change', () => renderExpenses());
+
+// ========== AUTENTICACIÓN ==========
+function updateUIForUser(user) {
+if (user) {
+document.getElementById('authPanel').style.display = 'none';
+document.getElementById('userInfo').style.display = 'block';
+document.getElementById('userEmail').innerText = user.email;
+document.getElementById('appContent').style.display = 'block';
+currentUser = user;
+syncFromCloud();
+} else {
+document.getElementById('authPanel').style.display = 'block';
+document.getElementById('userInfo').style.display = 'none';
+document.getElementById('appContent').style.display = 'none';
+currentUser = null;
+loadLocal();
+renderAll();
+}
+}
+
+auth.onAuthStateChanged(user => {
+updateUIForUser(user);
+});
+
+document.getElementById('loginBtn').onclick = async () => {
+const email = document.getElementById('loginEmail').value;
+const pass = document.getElementById('loginPass').value;
+try {
+await auth.signInWithEmailAndPassword(email, pass);
+showToast('Sesión iniciada');
+} catch(e) { showToast('Error: ' + e.message); }
+};
+
+document.getElementById('registerBtn').onclick = async () => {
+const email = document.getElementById('loginEmail').value;
+const pass = document.getElementById('loginPass').value;
+try {
+await auth.createUserWithEmailAndPassword(email, pass);
+showToast('Usuario registrado');
+} catch(e) { showToast('Error: ' + e.message); }
+};
+
+document.getElementById('logoutBtn').onclick = async () => {
+await auth.signOut();
+showToast('Sesión cerrada');
+};
+
+// ========== TEMAS ==========
+const themes = [
+{ name: 'midnight', label: '🌙', bg: '#0A0C10' }, { name: 'sunset', label: '🌅', bg: '#1E1A2F' },
+{ name: 'ocean', label: '🌊', bg: '#0A2F44' }, { name: 'forest', label: '🌲', bg: '#0A2F1F' },
+{ name: 'candy', label: '🍬', bg: '#FFE5F1' }
+];
+function applyTheme(themeName) {
+document.documentElement.setAttribute('data-theme', themeName);
+localStorage.setItem('hormiga_theme', themeName);
+document.querySelectorAll('.theme-btn').forEach(btn => {
+if (btn.dataset.theme === themeName) btn.classList.add('active');
+else btn.classList.remove('active');
+});
+}
+function buildThemeSelector() {
+const container = document.getElementById('themeSelector');
+container.innerHTML = themes.map(t => `<div class="theme-btn" data-theme="${t.name}" style="background: ${t.bg};"></div>`).join('');
+container.querySelectorAll('.theme-btn').forEach(btn => {
+btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+});
+const saved = localStorage.getItem('hormiga_theme');
+if (saved && themes.find(t => t.name === saved)) applyTheme(saved);
+else applyTheme('midnight');
+}
+
+buildThemeSelector();
+window.addEventListener('online', () => { if (currentUser) syncFromCloud(); });
+</script>
 </body>
 </html>
